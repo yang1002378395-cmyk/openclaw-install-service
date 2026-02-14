@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简代理状态悬浮框</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 可移动悬浮框 */
+        .floating-box {
+            position: fixed;
+            top: 100px;
+            left: 50px;
+            width: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            cursor: move;
+            user-select: none;
+        }
+
+        .floating-header {
+            background: #3B82F6;
+            color: white;
+            padding: 15px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .floating-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .floating-controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .floating-content {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .agent-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #3B82F6;
+        }
+
+        .agent-card.running {
+            border-left-color: #10B981;
+        }
+
+        .agent-card.completed {
+            border-left-color: #6B7280;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .agent-name {
+            font-weight: bold;
+            color: #1F2937;
+        }
+
+        .agent-status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: #D1FAE5;
+            color: #10B981;
+        }
+
+        .agent-status.completed {
+            background: #E5E7EB;
+            color: #6B7280;
+        }
+
+        .agent-task {
+            font-size: 14px;
+            color: #4B5563;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #E5E7EB;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3B82F6;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #6B7280;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div style="color: white; text-align: center; padding-top: 50px;">
+        <h1>🎯 可移动代理状态悬浮框</h1>
+        <p>你应该能看到左上角有一个蓝色的悬浮框</p>
+        <p>可以拖动、最小化、查看代理状态</p>
+    </div>
+
+    <!-- 可移动悬浮框 -->
+    <div class="floating-box" id="floatingBox">
+        <div class="floating-header">
+            <div class="floating-title">🤖 代理实时状态</div>
+            <div class="floating-controls">
+                <button onclick="refreshStatus()">🔄</button>
+                <button onclick="minimizeBox()">➖</button>
+                <button onclick="closeBox()">✕</button>
+            </div>
+        </div>
+        <div class="floating-content" id="floatingContent">
+            <!-- 代理卡片会在这里动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // 代理数据
+        const agents = [
+            { id: 1, name: 'Product Planner', status: 'running', progress: 20, task: '设计需求评审', eta: '20:30' },
+            { id: 2, name: 'UX/UI Designer', status: 'running', progress: 25, task: '设计系统完善', eta: '21:30' },
+            { id: 3, name: 'Backend Architect', status: 'running', progress: 18, task: '技术验证', eta: '21:00' },
+            { id: 4, name: 'Frontend Developer', status: 'running', progress: 22, task: '组件设计', eta: '20:45' },
+            { id: 5, name: 'AI Integration', status: 'running', progress: 15, task: 'API测试', eta: '21:15' },
+            { id: 6, name: 'Test & Quality', status: 'running', progress: 12, task: '测试计划', eta: '21:20' },
+            { id: 7, name: 'Supervisor', status: 'completed', progress: 100, task: '进度监控', eta: '持续' }
+        ];
+
+        // 拖拽功能
+        let isDragging = false;
+        let offsetX, offsetY;
+        const box = document.getElementById('floatingBox');
+
+        box.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return;
+            isDragging = true;
+            const rect = box.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            box.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            box.style.left = (e.clientX - offsetX) + 'px';
+            box.style.top = (e.clientY - offsetY) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            box.style.cursor = 'move';
+        });
+
+        // 刷新状态
+        function refreshStatus() {
+            updateDisplay();
+            alert('状态已刷新！');
+        }
+
+        // 最小化
+        function minimizeBox() {
+            const content = document.getElementById('floatingContent');
+            const minimizeBtn = box.querySelector('.floating-controls button:nth-child(2)');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                minimizeBtn.textContent = '➖';
+                box.style.width = '500px';
+            } else {
+                content.style.display = 'none';
+                minimizeBtn.textContent = '➕';
+                box.style.width = '200px';
+            }
+        }
+
+        // 关闭
+        function closeBox() {
+            box.style.display = 'none';
+        }
+
+        // 更新显示
+        function updateDisplay() {
+            const content = document.getElementById('floatingContent');
+            content.innerHTML = '';
+            
+            agents.forEach(agent => {
+                const card = document.createElement('div');
+                card.className = `agent-card ${agent.status}`;
+                card.innerHTML = `
+                    <div class="agent-header">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-status ${agent.status}">${agent.status === 'running' ? '运行中' : '已完成'}</div>
+                    </div>
+                    <div class="agent-task">${agent.task}</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${agent.progress}%"></div>
+                    </div>
+                    <div class="progress-info">
+                        <span>${agent.progress}%</span>
+                        <span>预计: ${agent.eta}</span>
+                    </div>
+                `;
+                content.appendChild(card);
+            });
+        }
+
+        // 自动更新进度
+        function autoUpdateProgress() {
+            agents.forEach(agent => {
+                if (agent.status === 'running' && agent.progress < 100) {
+                    agent.progress += Math.floor(Math.random() * 3) + 1;
+                    if (agent.progress >= 100) {
+                        agent.progress = 100;
+                        agent.status = 'completed';
+                    }
+                }
+            });
+            updateDisplay();
+        }
+
+        // 初始化
+        updateDisplay();
+        setInterval(autoUpdateProgress, 30000); // 每30秒更新一次
+    </script>
+</body>
+</html>

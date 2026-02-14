@@ -1,0 +1,112 @@
+{
+  "timestamp": "2026-02-14T14:45:40.990Z",
+  "config": {
+    "version": "\"1.0.0\"",
+    "enabled": true,
+    "mode": "\"monitoring\"  # monitoring|testing|enforcement",
+    "agent_timeouts": 0,
+    "task_execution": 0,
+    "warning": "\"2m\"",
+    "critical": "\"5m\"",
+    "restart": "\"30m\"",
+    "response_waiting": 0,
+    "health_check": 0,
+    "interval": "\"10m\"",
+    "timeout": "\"30s\"",
+    "workflow_timeouts": 0,
+    "phase_completion": 0,
+    "warning_multiplier": 1.5,
+    "critical_multiplier": 2,
+    "milestone_check": 0,
+    "grace_period": "\"5m\"",
+    "recovery_strategies": 0,
+    "- name": "\"cascading_failure\"",
+    "priority": 4,
+    "trigger": "\"system_overload\"",
+    "action": "\"reduce_quality\"",
+    "notifications": 0,
+    "channels": 0,
+    "level": "\"critical+\"",
+    "escalation": 0,
+    "- level": "\"critical\"",
+    "repeat_count": 2,
+    "escalate_to": "\"emergency\"",
+    "testing": 0,
+    "scenarios": 0,
+    "frequency": "\"monthly\"",
+    "auto_test_schedule": 0,
+    "- time": "\"sunday 03:00\"",
+    "scenario": "\"workflow_stall\""
+  },
+  "summary": {
+    "totalTests": 5,
+    "passedTests": 4,
+    "failedTests": 1,
+    "passRate": "80.0%"
+  },
+  "details": [
+    {
+      "name": "bound  Agent Timeout Detection",
+      "status": "failed",
+      "error": "Cannot read properties of undefined (reading 'warning')"
+    },
+    {
+      "name": "bound  Workflow Timeout Detection",
+      "status": "passed",
+      "duration": 0,
+      "result": {
+        "workflow": "test-workflow-001",
+        "phase": "design",
+        "expectedCompletion": 5400000,
+        "actualTime": 7200000,
+        "warningIssued": true
+      }
+    },
+    {
+      "name": "bound  Recovery Mechanism",
+      "status": "passed",
+      "duration": 1,
+      "result": {
+        "strategy": "task_reassignment",
+        "action": "reassign_to_backup",
+        "newAgent": "backup-designer",
+        "success": true,
+        "recoveryTime": 5000
+      }
+    },
+    {
+      "name": "bound  Notification System",
+      "status": "passed",
+      "duration": 0,
+      "result": {
+        "notificationsSent": 3,
+        "levelsTested": [
+          "warning",
+          "critical",
+          "emergency"
+        ],
+        "channelsTested": [
+          "log"
+        ]
+      }
+    },
+    {
+      "name": "bound  Stress Scenario",
+      "status": "passed",
+      "duration": 0,
+      "result": {
+        "concurrentTimeouts": 5,
+        "successRate": 1,
+        "totalProcessingTime": 0,
+        "averageProcessingTime": 0
+      }
+    }
+  ],
+  "recommendations": [
+    "添加代理级别超时配置",
+    "添加工作流级别超时配置",
+    "定义恢复策略",
+    "配置通知系统",
+    "修复失败的测试用例"
+  ]
+}

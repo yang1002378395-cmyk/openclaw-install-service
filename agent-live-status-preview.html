@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体实时状态预览</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(30, 30, 46, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        h1 {
+            background: linear-gradient(90deg, #00dbde, #fc00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .agent-card {
+            background: rgba(40, 40, 60, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .agent-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .agent-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .agent-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .agent-role {
+            font-size: 14px;
+            color: #a0a0c0;
+            background: rgba(100, 100, 150, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+        
+        .agent-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .status-running { background: rgba(16, 185, 129, 0.2); color: #10B981; }
+        .status-completed { background: rgba(59, 130, 246, 0.2); color: #3B82F6; }
+        
+        .current-task {
+            background: rgba(50, 50, 70, 0.4);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .stages-timeline {
+            margin: 20px 0;
+        }
+        
+        .stage-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stage-name {
+            font-weight: 600;
+            color: white;
+        }
+        
+        .stage-status {
+            font-size: 12px;
+            color: #a0a0c0;
+            float: right;
+        }
+        
+        .stage-progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .stage-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10B981, #3B82F6);
+            border-radius: 3px;
+        }
+        
+        .activity-log {
+            background: rgba(50, 50, 70, 0.4);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+        }
+        
+        .log-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+        }
+        
+        .features-list {
+            background: rgba(50, 50, 70, 0.4);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+        
+        .feature-item {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .feature-item:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10B981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 智能体实时工作状态监控界面</h1>
+        
+        <div style="text-align: center; margin-bottom: 30px; color: #a0a0c0;">
+            这是一个可拖拽、可最小化的悬浮监控面板，实时显示7个智能体的详细工作状态
+        </div>
+        
+        <!-- UX/UI Designer 示例 -->
+        <div class="agent-card">
+            <div class="agent-header">
+                <div class="agent-info">
+                    <div class="agent-avatar">🎨</div>
+                    <div>
+                        <div class="agent-name">UX/UI Designer</div>
+                        <div class="agent-role">设计专家</div>
+                    </div>
+                </div>
+                <div class="agent-status status-completed">已完成</div>
+            </div>
+            
+            <div class="current-task">
+                <strong>当前任务:</strong> 设计系统核心组件和页面原型
+                <div style="font-size: 14px; color: #a0a0c0; margin-top: 5px;">
+                    已完成色彩系统、组件规范、首页设计、工作室设计
+                </div>
+            </div>
+            
+            <div class="stages-timeline">
+                <div class="stage-item">
+                    <div class="stage-name">色彩系统设计</div>
+                    <div class="stage-status">已完成</div>
+                    <div class="stage-progress-bar">
+                        <div class="stage-progress-fill" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-name">组件规范制定</div>
+                    <div class="stage-status">已完成</div>
+                    <div class="stage-progress-bar">
+                        <div class="stage-progress-fill" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-name">首页设计</div>
+                    <div class="stage-status">已完成</div>
+                    <div class="stage-progress-bar">
+                        <div class="stage-progress-fill" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="activity-log">
+                <strong>📝 活动日志:</strong>
+                <div class="log-item">22:32 - 完成首页设计核心文档</div>
+                <div class="log-item">22:33 - 完成工作室设计核心文档</div>
+                <div class="log-item">22:35 - 所有设计任务完成</div>
+            </div>
+        </div>
+        
+        <!-- AI Integration Specialist 示例 -->
+        <div class="agent-card">
+            <div class="agent-header">
+                <div class="agent-info">
+                    <div class="agent-avatar">🤖</div>
+                    <div>
+                        <div class="agent-name">AI Integration Specialist</div>
+                        <div class="agent-role">AI集成专家</div>
+                    </div>
+                </div>
+                <div class="agent-status status-running">运行中</div>
+            </div>
+            
+            <div class="current-task">
+                <strong>当前任务:</strong> AI API测试和集成验证
+                <div style="font-size: 14px; color: #a0a0c0; margin-top: 5px;">
+                    正在测试Adobe Firefly、Runway Gen-2、Udio等API
+                </div>
+            </div>
+            
+            <div class="stages-timeline">
+                <div class="stage-item">
+                    <div class="stage-name">模型选型报告</div>
+                    <div class="stage-status">已完成</div>
+                    <div class="stage-progress-bar">
+                        <div class="stage-progress-fill" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-name">Firefly API测试</div>
+                    <div class="stage-status">进行中 (55%)</div>
+                    <div class="stage-progress-bar">
+                        <div class="stage-progress-fill" style="width: 55%"></div>
+                    </div>
+                </div>
+                <div class="stage-item">
+                    <div class="stage-name">成本优化策略</div>
+                    <div class="stage-status">待开始</div>
+                    <div class="stage-progress-bar">
+                        <div class="stage-progress-fill" style="width: 20%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="activity-log">
+                <strong>📝 活动日志:</strong>
+                <div class="log-item">22:38 - 创建API测试模拟结果报告</div>
+                <div class="log-item">22:40 - 开始真实API测试验证</div>
+                <div class="log-item">22:45 - 测试进行中...</div>
+            </div>
+        </div>
+        
+        <div class="features-list">
+            <h3>🎯 界面核心功能:</h3>
+            <div class="feature-item">可拖拽悬浮面板 - 可在屏幕上任意位置移动</div>
+            <div class="feature-item">最小化模式 - 显示概要信息，节省屏幕空间</div>
+            <div class="feature-item">实时状态更新 - 每30秒自动更新进度</div>
+            <div class="feature-item">详细工作阶段 - 显示每个智能体的工作流程</div>
+            <div class="feature-item">活动日志 - 记录智能体的所有操作和决策</div>
+            <div class="feature-item">产出文件跟踪 - 显示已生成的文件和文档</div>
+            <div class="feature-item">进度百分比 - 实时显示总体进度和阶段进度</div>
+            <div class="feature-item">预计完成时间 - 显示每个任务的ETA</div>
+            <div class="feature-item">状态颜色编码 - 不同状态用不同颜色区分</div>
+            <div class="feature-item">响应式设计 - 适配不同屏幕尺寸</div>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; border-left: 5px solid #10B981;">
+            <h3>📊 当前项目状态:</h3>
+            <p><strong>第二阶段核心交付物:</strong> ✅ 6/6 已完成 (22:38完成)</p>
+            <p><strong>时间提前:</strong> 🎉 1小时22分钟 (原计划00:00完成)</p>
+            <p><strong>BMAD超时模块:</strong> ✅ 已成功集成</p>
+            <p><strong>总体进度:</strong> ~65% 完成</p>
+            <p><strong>下一步:</strong> 开始第三阶段技术架构设计</p>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center; color: #a0a0c0; font-size: 14px;">
+            完整界面文件: <code>agent-live-status.html</code> (46KB, 包含完整JavaScript功能)
+            <br>创建时间: 2026-02-14 20:28
+        </div>
+    </div>
+</body>
+</html>

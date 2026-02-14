@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体实时工作状态</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            background: linear-gradient(90deg, #00dbde, #fc00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.8;
+        }
+
+        /* 可移动悬浮框 */
+        .live-status-panel {
+            position: fixed;
+            top: 50px;
+            left: 50px;
+            width: 600px;
+            background: rgba(30, 30, 46, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10000;
+            cursor: move;
+            user-select: none;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .live-status-panel.minimized {
+            width: 250px;
+            height: 60px;
+            top: 20px;
+            right: 20px;
+            left: auto;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .panel-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .panel-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+        }
+
+        .panel-content {
+            padding: 25px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        /* 智能体工作流显示 */
+        .agent-workflow {
+            margin-bottom: 25px;
+            background: rgba(40, 40, 60, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .agent-workflow:hover {
+            background: rgba(50, 50, 70, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .agent-workflow.running {
+            border-left-color: #10B981;
+        }
+
+        .agent-workflow.completed {
+            border-left-color: #3B82F6;
+        }
+
+        .agent-workflow.paused {
+            border-left-color: #F59E0B;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .agent-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .agent-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+
+        .agent-details {
+            flex: 1;
+        }
+
+        .agent-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .agent-role {
+            font-size: 14px;
+            color: #a0a0c0;
+            background: rgba(100, 100, 150, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .agent-status {
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-running {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10B981;
+        }
+
+        .status-completed {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3B82F6;
+        }
+
+        .status-paused {
+            background: rgba(245, 158, 11, 0.2);
+            color: #F59E0B;
+        }
+
+        /* 当前任务显示 */
+        .current-task {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(50, 50, 70, 0.4);
+            border-radius: 12px;
+        }
+
+        .task-title {
+            font-size: 14px;
+            color: #a0a0c0;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .task-content {
+            font-size: 16px;
+            color: white;
+            line-height: 1.5;
+            padding-left: 24px;
+        }
+
+        /* 工作阶段进度 */
+        .work-stages {
+            margin-bottom: 20px;
+        }
+
+        .stages-title {
+            font-size: 14px;
+            color: #a0a0c0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stages-timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .stage-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stage-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .stage-dot {
+            position: absolute;
+            left: -30px;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4B5563;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+        }
+
+        .stage-dot.active {
+            background: #10B981;
+            animation: pulse 2s infinite;
+        }
+
+        .stage-dot.completed {
+            background: #3B82F6;
+        }
+
+        .stage-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .stage-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .stage-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: rgba(100, 100, 150, 0.2);
+            color: #a0a0c0;
+        }
+
+        .stage-details {
+            font-size: 14px;
+            color: #c0c0e0;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .stage-progress {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stage-progress-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .stage-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10B981, #3B82F6);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .stage-progress-text {
+            font-size: 12px;
+            color: #a0a0c0;
+            min-width: 40px;
+        }
+
+        /* 实时活动日志 */
+        .activity-log {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(50, 50, 70, 0.4);
+            border-radius: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-title {
+            font-size: 14px;
+            color: #a0a0c0;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-list {
+            list-style: none;
+        }
+
+        .log-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+            color: #c0c0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #a0a0c0;
+            min-width: 50px;
+        }
+
+        .log-content {
+            flex: 1;
+        }
+
+        .log-type {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .log-type.task {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3B82F6;
+        }
+
+        .log-type.decision {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8B5CF6;
+        }
+
+        .log-type.issue {
+            background: rgba(239, 68, 68, 0.2);
+            color: #EF4444;
+        }
+
+        .log-type.complete {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10B981;
+        }
+
+        /* 产出文件 */
+        .output-files {
+            margin-top: 15px;
+        }
+
+        .files-title {
+            font-size: 14px;
+            color: #a0a0c0;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .files-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .file-tag {
+            background: rgba(100, 100, 150, 0.3);
+            color: #c0c0e0;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .file-tag:hover {
+            background: rgba(100, 100, 150, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* 动画 */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .live-status-panel {
+                width: 90%;
+                left: 5%;
+                right: 5%;
+            }
+            
+            .agent-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .agent-status {
+                align-self: flex-start;
+            }
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 100, 150, 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 100, 150, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 智能体实时工作状态监控</h1>
+            <p>查看每个智能体正在做什么具体工作，以及工作阶段进度</p>
+        </div>
+        
+        <div class="instructions">
+            <h2 style="color: white; margin-bottom: 20px;">使用说明</h2>
+            <ul style="color: #c0c0e0; line-height: 1.8; margin-left: 20px;">
+                <li>左侧悬浮框显示所有智能体的实时工作状态</li>
+                <li>拖动标题栏可以移动悬浮框</li>
+                <li>点击➖按钮可以最小化到右上角</li>
+                <li>每个智能体显示：当前任务、工作阶段、活动日志、产出文件</li>
+                <li>进度条实时更新，活动日志每30秒自动添加</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 可移动实时状态面板 -->
+    <div class="live-status-panel" id="liveStatusPanel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <span>📊 智能体实时工作状态</span>
+                <span id="activeCount" style="font-size: 14px; opacity: 0.8;">(6/7 运行中)</span>
+            </div>
+            <div class="panel-controls">
+                <button class="panel-btn" onclick="refreshAll()" title="刷新状态">🔄</button>
+                <button class="panel-btn" onclick="togglePanel()" title="最小化">➖</button>
+                <button class="panel-btn" onclick="closePanel()" title="关闭">✕</button>
+            </div>
+        </div>
+        <div class="panel-content" id="panelContent">
+            <!-- 智能体工作流将通过JavaScript动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // 智能体详细工作数据
+        const agentsWorkData = {
+            'product-planner': {
+                name: '产品规划师',
+                role: 'Product Planner',
+                avatar: '📋',
+                status: 'running',
+                currentTask: '设计需求评审和优先级确认',
+                taskDetails: '正在评审UX/UI设计需求对齐性，准备设计评审会议材料，确定第二阶段设计验收标准',
+                
+                stages: [
+                    {
+                        name: '需求文档整理',
+                        status: 'completed',
+                        progress: 100,
+                        details: '已完成第一阶段所有需求文档的整理和归档',
+                        time: '20:00-20:05'
+                    },
+                    {
+                        name: '设计需求对齐',
+                        status: 'active',
+                        progress: 65,
+                        details: '正在与UX/UI Designer对齐设计需求，确保一致性',
+                        time: '20:05-20:15'
+                    },
+                    {
+                        name: '评审材料准备',
+                        status: 'pending',
+                        progress: 30,
+                        details: '准备设计评审会议的演示材料和议程',
+                        time: '20:15-20:25'
+                    },
+                    {
+                        name: '验收标准制定',
+                        status: 'pending',
+                        progress: 0,
+                        details: '制定第二阶段设计工作的验收标准和检查清单',
+                        time: '20:25-20:30'
+                    }
+                ],
+                
+                activityLog: [
+                    { time: '20:00', type: 'task', content: '开始第二阶段工作：需求文档整理' },
+                    { time: '20:03', type: 'complete', content: '完成第一阶段需求文档归档' },
+                    { time: '20:06', type: 'task', content: '开始设计需求对齐工作' },
+                    { time: '20:09', type: 'decision', content: '确定设计评审会议时间为20:30' },
+                    { time: '20:12', type: 'task', content: '正在准备评审会议材料' }
+                ],
+                
+                outputFiles: [
+                    'design-review-agenda.md',
+                    'acceptance-criteria-checklist.md',
+                    'requirements-alignment-report.md'
+                ],
+                
+                eta: '20:30',
+                overallProgress: 48
+            },
+            
+            'ux-designer': {
+                name: 'UX/UI设计师',
+                role: 'UX/UI Designer',
+                avatar: '🎨',
+                status: 'running',
+                currentTask: '设计系统完善和页面视觉设计',
+                taskDetails: '正在完善色彩系统、间距网格，开始首页和Dashboard的视觉设计',
+                
+                stages: [
+                    {
+                        name: '设计令牌系统',
+                        status: 'completed',
+                        progress: 100,
+                        details: '已完成设计令牌系统初稿，包括颜色、字体、间距等',
+                        time: '20:00-20:08'
+                    },
+                    {
+                        name: '色彩系统设计',
+                        status: 'active',
+                        progress: 75,
+                        details: '正在设计主色板、辅助色、语义颜色系统',
+                        time: '20:08-20:18'
+                    },
+                    {
+                        name: '布局网格系统',
+                        status: 'pending',
+                        progress: 20,
+                        details: '设计响应式布局网格和间距系统',
+                        time: '20:18-20:28'
+                    },
+                    {
+                        name: '页面视觉设计',
+                        status: 'pending',
+                        progress: 0,
+                        details: '开始首页和Dashboard的完整视觉设计',
+                        time: '20:28-21:30'
+                    }
+                ],
+                
+                activityLog: [
+                    { time: '20:00', type: 'task', content: '开始设计系统完善工作' },
+                    { time: '20:05', type: 'complete', content: '设计令牌系统初稿完成' },
+                    { time: '20:08', type: 'task', content: '开始色彩系统设计' },
+                    { time: '20:11', type: 'decision', content: '确定主品牌色为科技蓝 (#3B82F6)' },
+                    { time: '20:14', type: 'task', content: '正在设计辅助色彩系统' }
+                ],
+                
+                outputFiles: [
+                    'design-tokens.json',
+                    'color-system.fig',
+                    'layout-grid-system.fig',
+                    'homepage-design.fig'
+                ],
+                
+                eta: '21:30',
+                overallProgress: 49
+            },
+            
+            'backend-arch': {
+                name: '后端架构师',
+                role: 'Backend Architect',
+                avatar: '🏗️',
+                status: 'running',
+                currentTask: '技术可行性验证和API架构设计',
+                taskDetails: '正在创建技术原型验证环境，验证AI API集成方案，完善数据库设计',
+                
+                stages: [
+                    {
+                        name: '架构文档整理',
+                        status: 'completed',
+                        progress: 100,
+                        details: '已完成第一阶段架构设计文档的整理',
+                        time: '20:00-20:04'
+                    },
+                    {
+                        name: '原型环境搭建',
+                        status: 'active',
+                        progress: 60,
+                        details: '正在搭建FastAPI + PostgreSQL技术原型环境',
+                        time: '20:04-20:14'
+                    },
+                    {
+                        name: 'AI API集成验证',
+                        status: 'pending',
+                        progress: 15,
+                        details: '验证Adobe Firefly和Runway API集成技术方案',
+                        time: '20:14-20:24'
+                    },
+                    {
+                        name: '数据库设计完善',
+                        status: 'pending',
+                        progress: 0,
+                        details: '完善数据库表结构和关系设计',
+                        time: '20:24-21:00'
+                    }
+                ],
+                
+                activityLog: [
+                    { time: '20:00', type: 'task', content: '开始技术可行性验证' },
+                    { time: '20:04', type: 'complete', content: '架构文档整理完成' },
+                    { time: '20:07', type: 'task', content: '开始原型环境搭建' },
+                    { time: '20:10', type: 'decision', content: '选择Docker Compose作为本地开发环境' },
+                    { time: '20:13', type: 'task', content: '正在配置PostgreSQL容器' }
+                ],
+                
+                outputFiles: [
+                    'technical-prototype/',
+                    'api-architecture-diagram.md',
+                    'database-schema.sql',
+                    'feasibility-report.md'
+                ],
+                
+                eta: '21:00',
+                overallProgress: 44
+            },
+            
+            'frontend-dev': {
+                name: '前端开发者',
+                role: 'Frontend Developer',
+                avatar: '💻',
+                status: 'running',
+                currentTask: '前端架构验证和React组件设计',
+                taskDetails: '正在创建React组件原型，验证Next.js 14配置，测试响应式设计',
+                
+                stages: [
+                    {
+                        name: '环境配置完成',
+                        status: 'completed',
+                        progress: 100,
+                        details: '已完成Next.js 14 + TypeScript + Tailwind CSS环境配置',
+                        time: '20:00-20:02'
+                    },
+                    {
+                        name: '组件架构设计',
+                        status: 'active',
+                        progress: 70,
+                        details: '正在设计可复用的React组件架构和目录结构',
+                        time: '20:02-20:12'
+                    },
+                    {
+                        name: '基础组件开发',
+                        status: 'pending',
+                        progress: 25,
+                        details: '开发Button、Input、Card等基础UI组件',
+                        time: '20:12-20:22'
+                    },
+                    {
+                        name: '页面组件集成',
+                        status: 'pending',
+                        progress: 0,
+                        details: '将组件集成到页面模板中，测试响应式',
+                        time: '20:22-20:45'
+                    }
+                ],
+                
+                activityLog: [
+                    { time: '20:00', type: 'task', content: '开始前端架构验证' },
+                    { time: '20:02', type: 'complete', content: '开发环境配置完成' },
+                    { time: '20:05', type: 'task', content: '开始组件架构设计' },
+                    { time: '20:08', type: 'decision', content: '采用原子设计模式组织组件' },
+                    { time: '20:11', type: 'task', content: '正在设计Button组件API' }
+                ],
+                
+                outputFiles: [
+                    'component-library/',
+                    'frontend-architecture.md',
+                    'responsive-test-results.md',
+                    'component-prototypes/'
+                ],
+                
+                eta: '20:45',
+                overallProgress: 49
+            },
+            
+            'ai-specialist': {
+                name: 'AI集成专家',
+                role: 'AI Integration Specialist',
+                avatar: '🤖',
+                status: 'running',
+                currentTask: 'AI模型API测试和成本优化分析',
+                taskDetails: '正在测试Adobe Firefly API集成，优化成本控制策略，设计异步任务流程',
+                
+                stages: [
+                    {
+                        name: '模型选型报告',
+                        status: 'completed',
+                        progress: 100,
+                        details: '已完成AI模型选型分析和成本对比报告',
+                        time: '20:00-20:03'
+                    },
+                    {
+                        name: 'Firefly API测试',
+                        status: 'active',
+                        progress: 55,
+                        details: '正在测试Adobe Firefly图像生成API的稳定性和质量',
+                        time: '20:03-20:13'
+                    },
+                    {
+                        name: '成本优化策略',
+                        status: 'pending',
+                        progress: 20,
+                        details: '设计API调用缓存、批量处理等成本优化方案',
+                        time: '20:13-20:23'
+                    },
+                    {
+                        name: '异步任务设计',
+                        status: 'pending',
+                        progress: 0,
+                        details: '设计Celery + Redis异步任务处理流程',
+                        time: '20:23-21:15'
+                    }
+                ],
+                
+                activityLog: [
+                    { time: '20:00', type: 'task', content: '开始AI模型API测试' },
+                    { time: '20:03', type: 'complete', content: '模型选型报告完成' },
+                    { time: '20:06', type: 'task', content: '开始Firefly API测试' },
+                    { time: '20:09', type: 'decision', content: '确定使用Firefly作为主要图像生成模型' },
+                    { time: '20:12', type: 'task', content: '正在测试API响应时间' }
+                ],
+                
+                outputFiles: [
+                    'api-test-results/',
+                    'cost-optimization-plan.md',
+                    'async-task-design.md',
+                    'model-comparison-report.md'
+                ],
+                
+                eta: '21:15',
+                overallProgress: 44
+            },
+            
+            'test-quality': {
+                name: '测试质量专家',
+                role: 'Test & Quality',
+                avatar: '🧪',
+                status: 'running',
+                currentTask: '测试计划制定和自动化工具配置',
+                taskDetails: '正在配置Jest + Playwright测试环境，设计自动化测试流水线',
+                
+                stages: [
+                    {
+                        name: '测试策略框架',
+                        status: 'completed',
+                        progress: 100,
+                        details: '已完成整体测试策略和质量指标框架',
+                        time: '20:00-20:02'
+                    },
+                    {
+                        name: '测试环境配置',
+                        status: 'active',
+                        progress: 50,
+                        details: '正在配置Jest单元测试和Playwright E2E测试环境',
+                        time: '20:02-20:12'
+                    },
+                    {
+                        name: '自动化流水线设计',
+                        status: 'pending',
+                        progress: 15,
+                        details: '设计GitHub Actions自动化测试流水线',
+                        time: '20:12-20:22'
+                    },
+                    {
+                        name: '测试用例设计',
+                        status: 'pending',
+                        progress: 0,
+                        details: '设计单元测试、集成测试、E2E测试用例',
+                        time: '20:22-21:20'
+                    }
+                ],
+                
+                activityLog: [
+                    { time: '20:00', type: 'task', content: '开始测试计划制定' },
+                    { time: '20:02', type: 'complete', content: '测试策略框架完成' },
+                    { time: '20:05', type: 'task', content: '开始测试环境配置' },
+                    { time: '20:08', type: 'decision', content: '选择Playwright作为E2E测试框架' },
+                    { time: '20:11', type: 'task', content: '正在配置Jest测试环境' }
+                ],
+                
+                outputFiles: [
+                    'test-environment/',
+                    'automation-pipeline.yml',
+                    'test-case-templates.md',
+                    'quality-metrics-dashboard.md'
+                ],
+                
+                eta: '21:20',
+                overallProgress: 41
+            },
+            
+            'supervisor': {
+                name: '项目监督员',
+                role: 'Supervisor',
+                avatar: '👁️',
+                status: 'completed',
+                currentTask: '项目协调和进度监控',
+                taskDetails: '实时监控各智能体进度，协调协作，处理风险，记录BMAD记忆体',
+                
+                stages: [
+                    {
+                        name: '第二阶段启动',
+                        status: 'completed',
+                        progress: 100,
+                        details: '已成功启动第二阶段工作流，分配所有任务',
+                        time: '20:00-20:03'
+                    },
+                    {
+                        name: '进度监控系统',
+                        status: 'completed',
+                        progress: 100,
+                        details: '实时监控系统已运行，正在跟踪各智能体进度',
+                        time: '20:03-20:06'
+                    },
+                    {
+                        name: '协作协调',
+                        status: 'active',
+                        progress: 80,
+                        details: '正在协调智能体间的协作和沟通',
+                        time: '20:06-持续'
+                    },
+                    {
+                        name: '风险管理',
+                        status: 'active',
+                        progress: 70,
+                        details: '监控项目风险，制定应对策略',
+                        time: '20:06-持续'
+                    }
+                ],
+                
+                activityLog: [
+                    { time: '20:00', type: 'task', content: '启动第二阶段工作流' },
+                    { time: '20:03', type: 'complete', content: '所有智能体状态检查完成' },
+                    { time: '20:06', type: 'task', content: '开始实时进度监控' },
+                    { time: '20:09', type: 'decision', content: '确定20:15进行设计-开发对齐会议' },
+                    { time: '20:12', type: 'task', content: '正在协调UX和前端协作' }
+                ],
+                
+                outputFiles: [
+                    'progress-reports/',
+                    'coordination-logs.md',
+                    'risk-register.md',
+                    'bmad-memory-logs.md'
+                ],
+                
+                eta: '持续',
+                overallProgress: 88
+            }
+        };
+
+        // 拖拽功能
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        const panel = document.getElementById('liveStatusPanel');
+
+        panel.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDrag);
+
+        function startDrag(e) {
+            if (e.target.closest('.panel-btn')) return;
+            
+            isDragging = true;
+            const rect = panel.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            panel.style.cursor = 'grabbing';
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            panel.style.left = (e.clientX - dragOffset.x) + 'px';
+            panel.style.top = (e.clientY - dragOffset.y) + 'px';
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            panel.style.cursor = 'move';
+        }
+
+        // 切换面板最小化
+        function togglePanel() {
+            panel.classList.toggle('minimized');
+            const minimizeBtn = panel.querySelector('.panel-btn:nth-child(2)');
+            minimizeBtn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';
+            
+            if (panel.classList.contains('minimized')) {
+                updateMinimizedView();
+            } else {
+                updatePanelContent();
+            }
+        }
+
+        // 关闭面板
+        function closePanel() {
+            panel.style.display = 'none';
+        }
+
+        // 刷新所有状态
+        function refreshAll() {
+            updatePanelContent();
+            addActivityLog('system', '状态已手动刷新');
+        }
+
+        // 更新面板内容
+        function updatePanelContent() {
+            const content = document.getElementById('panelContent');
+            if (!content) return;
+
+            content.innerHTML = '';
+            
+            Object.keys(agentsWorkData).forEach(agentId => {
+                const agent = agentsWorkData[agentId];
+                const workflow = createAgentWorkflow(agentId, agent);
+                content.appendChild(workflow);
+            });
+            
+            updateActiveCount();
+        }
+
+        // 创建智能体工作流显示
+        function createAgentWorkflow(agentId, agent) {
+            const workflow = document.createElement('div');
+            workflow.className = `agent-workflow ${agent.status}`;
+            workflow.id = `workflow-${agentId}`;
+            
+            // 计算阶段进度
+            const stageProgress = calculateStageProgress(agent.stages);
+            
+            workflow.innerHTML = `
+                <div class="agent-header">
+                    <div class="agent-info">
+                        <div class="agent-avatar">${agent.avatar}</div>
+                        <div class="agent-details">
+                            <div class="agent-name">${agent.name}</div>
+                            <div class="agent-role">${agent.role}</div>
+                        </div>
+                    </div>
+                    <div class="agent-status status-${agent.status}">
+                        <span>${getStatusText(agent.status)}</span>
+                        <span>${agent.overallProgress}%</span>
+                    </div>
+                </div>
+                
+                <div class="current-task">
+                    <div class="task-title">📝 当前任务</div>
+                    <div class="task-content">${agent.currentTask}</div>
+                    <div style="font-size: 14px; color: #a0a0c0; margin-top: 8px;">${agent.taskDetails}</div>
+                </div>
+                
+                <div class="work-stages">
+                    <div class="stages-title">📋 工作阶段 (${stageProgress.completed}/${agent.stages.length} 完成)</div>
+                    <div class="stages-timeline">
+                        ${agent.stages.map((stage, index) => `
+                            <div class="stage-item">
+                                <div class="stage-dot ${stage.status}">
+                                    ${stage.status === 'completed' ? '✓' : stage.status === 'active' ? '●' : index + 1}
+                                </div>
+                                <div class="stage-info">
+                                    <div class="stage-name">${stage.name}</div>
+                                    <div class="stage-status">${stage.time}</div>
+                                </div>
+                                <div class="stage-details">${stage.details}</div>
+                                <div class="stage-progress">
+                                    <div class="stage-progress-bar">
+                                        <div class="stage-progress-fill" style="width: ${stage.progress}%"></div>
+                                    </div>
+                                    <div class="stage-progress-text">${stage.progress}%</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="activity-log">
+                    <div class="log-title">📝 实时活动日志</div>
+                    <ul class="log-list">
+                        ${agent.activityLog.map(log => `
+                            <li class="log-item">
+                                <span class="log-time">${log.time}</span>
+                                <span class="log-type ${log.type}">${getLogTypeText(log.type)}</span>
+                                <span class="log-content">${log.content}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                
+                <div class="output-files">
+                    <div class="files-title">📁 产出文件</div>
+                    <div class="files-list">
+                        ${agent.outputFiles.map(file => `
+                            <div class="file-tag">
+                                <span>📄</span>
+                                <span>${file}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; color: #a0a0c0;">
+                    <span>预计完成: ${agent.eta}</span>
+                    <span style="float: right;">总体进度: ${agent.overallProgress}%</span>
+                </div>
+            `;
+            
+            return workflow;
+        }
+
+        // 计算阶段进度
+        function calculateStageProgress(stages) {
+            const completed = stages.filter(s => s.status === 'completed').length;
+            const active = stages.filter(s => s.status === 'active').length;
+            const total = stages.length;
+            
+            return {
+                completed,
+                active,
+                total,
+                percentage: Math.round((completed / total) * 100)
+            };
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'running': '运行中',
+                'completed': '已完成',
+                'paused': '已暂停'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 获取日志类型文本
+        function getLogTypeText(type) {
+            const typeMap = {
+                'task': '任务',
+                'decision': '决策',
+                'issue': '问题',
+                'complete': '完成'
+            };
+            return typeMap[type] || type;
+        }
+
+        // 更新活跃计数
+        function updateActiveCount() {
+            const runningCount = Object.values(agentsWorkData).filter(a => a.status === 'running').length;
+            const totalCount = Object.keys(agentsWorkData).length;
+            document.getElementById('activeCount').textContent = `(${runningCount}/${totalCount} 运行中)`;
+        }
+
+        // 更新最小化视图
+        function updateMinimizedView() {
+            const header = panel.querySelector('.panel-header');
+            if (!panel.classList.contains('minimized')) return;
+
+            const runningCount = Object.values(agentsWorkData).filter(a => a.status === 'running').length;
+            const totalCount = Object.keys(agentsWorkData).length;
+            const avgProgress = Math.round(Object.values(agentsWorkData).reduce((sum, a) => sum + a.overallProgress, 0) / totalCount);
+            
+            header.innerHTML = `
+                <div class="panel-title">
+                    <span>🤖 ${runningCount}/${totalCount} 运行中</span>
+                    <span style="font-size: 14px; opacity: 0.8;">${avgProgress}%</span>
+                </div>
+                <div class="panel-controls">
+                    <button class="panel-btn" onclick="togglePanel()">➕</button>
+                </div>
+            `;
+        }
+
+        // 添加活动日志
+        function addActivityLog(agentId, content) {
+            const agent = agentsWorkData[agentId];
+            if (!agent) return;
+            
+            const now = new Date();
+            const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            // 随机选择日志类型
+            const types = ['task', 'decision', 'complete'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            agent.activityLog.unshift({
+                time: time,
+                type: type,
+                content: content
+            });
+            
+            // 保持最多5条日志
+            if (agent.activityLog.length > 5) {
+                agent.activityLog.pop();
+            }
+            
+            // 如果面板是展开状态，更新显示
+            if (!panel.classList.contains('minimized')) {
+                updatePanelContent();
+            }
+        }
+
+        // 模拟智能体工作进展
+        function simulateAgentWork() {
+            Object.keys(agentsWorkData).forEach(agentId => {
+                const agent = agentsWorkData[agentId];
+                if (agent.status !== 'running') return;
+                
+                // 随机增加总体进度
+                const progressIncrement = Math.floor(Math.random() * 3) + 1;
+                agent.overallProgress = Math.min(100, agent.overallProgress + progressIncrement);
+                
+                // 更新活动阶段
+                agent.stages.forEach(stage => {
+                    if (stage.status === 'active' && stage.progress < 100) {
+                        stage.progress = Math.min(100, stage.progress + progressIncrement * 2);
+                        if (stage.progress >= 100) {
+                            stage.status = 'completed';
+                            
+                            // 激活下一个阶段
+                            const nextStageIndex = agent.stages.findIndex(s => s === stage) + 1;
+                            if (nextStageIndex < agent.stages.length) {
+                                agent.stages[nextStageIndex].status = 'active';
+                            }
+                        }
+                    }
+                });
+                
+                // 检查是否所有阶段都完成
+                const allCompleted = agent.stages.every(s => s.status === 'completed');
+                if (allCompleted && agent.overallProgress >= 100) {
+                    agent.status = 'completed';
+                    addActivityLog(agentId, `${agent.name} 已完成所有工作`);
+                }
+                
+                // 随机添加活动日志
+                if (Math.random() > 0.7) {
+                    const activities = [
+                        '正在处理当前任务',
+                        '与相关智能体进行协作',
+                        '更新工作文档',
+                        '进行技术验证',
+                        '优化工作流程'
+                    ];
+                    const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+                    addActivityLog(agentId, randomActivity);
+                }
+            });
+            
+            // 更新显示
+            if (!panel.classList.contains('minimized')) {
+                updatePanelContent();
+            } else {
+                updateMinimizedView();
+            }
+            
+            updateActiveCount();
+        }
+
+        // 初始化
+        function init() {
+            updatePanelContent();
+            
+            // 每30秒模拟工作进展
+            setInterval(simulateAgentWork, 30000);
+            
+            // 每2分钟添加系统日志
+            setInterval(() => {
+                const agents = Object.keys(agentsWorkData);
+                const randomAgent = agents[Math.floor(Math.random() * agents.length)];
+                const systemMessages = [
+                    '系统自动保存工作进度',
+                    '检查协作状态',
+                    '更新进度报告',
+                    '同步工作状态'
+                ];
+                const randomMessage = systemMessages[Math.floor(Math.random() * systemMessages.length)];
+                addActivityLog(randomAgent, randomMessage);
+            }, 120000);
+            
+            // 初始系统日志
+            setTimeout(() => {
+                addActivityLog('supervisor', '实时监控系统已启动');
+            }, 1000);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

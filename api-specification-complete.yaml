@@ -1,0 +1,663 @@
+openapi: 3.0.3
+info:
+  title: AI Content Platform API
+  description: AI内容生产平台 RESTful API 规范
+  version: 1.0.0
+  contact:
+    name: Platform Team
+    email: api@aicontentplatform.com
+  license:
+    name: Proprietary
+    url: https://aicontentplatform.com/license
+
+servers:
+  - url: https://api.aicontentplatform.com/v1
+    description: Production server
+  - url: https://staging-api.aicontentplatform.com/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development
+
+# ==================== API 设计规范 ====================
+x-api-design-guidelines:
+  versioning: "使用URL路径版本控制 (v1, v2)"
+  authentication: "Bearer Token (JWT) + API Key"
+  rate-limiting: "基于用户和IP的令牌桶算法"
+  error-handling: "统一的错误响应格式"
+  pagination: "基于游标的分页（cursor-based）"
+  filtering: "查询参数过滤，支持嵌套条件"
+  sorting: "多字段排序，支持升降序"
+  idempotency: "支持幂等性请求（Idempotency-Key）"
+  webhooks: "支持事件订阅和回调"
+  documentation: "OpenAPI 3.0 + API文档门户"
+
+# ==================== 认证授权机制 ====================
+x-authentication:
+  jwt:
+    algorithm: "RS256"
+    access_token_ttl: "15m"
+    refresh_token_ttl: "7d"
+    issuer: "ai-content-platform"
+  oauth2:
+    providers:
+      - google
+      - github
+      - microsoft
+  api_key:
+    header: "X-API-Key"
+    usage: "服务间通信"
+
+# ==================== 错误处理规范 ====================
+x-error-codes:
+  validation:
+    INVALID_INPUT: "请求参数无效"
+    MISSING_REQUIRED: "缺少必填参数"
+    INVALID_FORMAT: "参数格式错误"
+  authentication:
+    INVALID_TOKEN: "令牌无效"
+    EXPIRED_TOKEN: "令牌已过期"
+    INVALID_CREDENTIALS: "认证信息错误"
+  authorization:
+    INSUFFICIENT_PERMISSIONS: "权限不足"
+    RESOURCE_OWNERSHIP: "资源所有权错误"
+  business:
+    QUOTA_EXCEEDED: "额度超限"
+    RATE_LIMITED: "请求频率超限"
+    SERVICE_UNAVAILABLE: "服务暂时不可用"
+  system:
+    INTERNAL_ERROR: "内部服务器错误"
+    DATABASE_ERROR: "数据库错误"
+    EXTERNAL_SERVICE_ERROR: "外部服务错误"
+
+# ==================== 分页和过滤机制 ====================
+x-pagination:
+  default_limit: 20
+  max_limit: 100
+  cursor_based: true
+  include_total: true
+
+x-filtering:
+  operators:
+    eq: "等于"
+    ne: "不等于"
+    gt: "大于"
+    gte: "大于等于"
+    lt: "小于"
+    lte: "小于等于"
+    in: "在列表中"
+    nin: "不在列表中"
+    like: "模糊匹配"
+    ilike: "不区分大小写模糊匹配"
+  nested: true
+  logical: ["and", "or"]
+
+# ==================== 核心端点设计 ====================
+paths:
+  # ---------- 认证端点 ----------
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: 用户登录
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: 设置刷新令牌Cookie
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: 刷新令牌
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: 令牌刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+
+  # ---------- 用户端点 ----------
+  /users/me:
+    get:
+      tags: [Users]
+      summary: 获取当前用户
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    patch:
+      tags: [Users]
+      summary: 更新用户信息
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # ---------- 项目端点 ----------
+  /projects:
+    get:
+      tags: [Projects]
+      summary: 获取项目列表
+      operationId: listProjects
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/FilterParam'
+        - name: search
+          in: query
+          description: 搜索项目名称和描述
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 项目列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjects'
+
+    post:
+      tags: [Projects]
+      summary: 创建项目
+      operationId: createProject
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: 项目创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: 新创建项目的URL
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /projects/{projectId}:
+    get:
+      tags: [Projects]
+      summary: 获取项目详情
+      operationId: getProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      responses:
+        '200':
+          description: 项目详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags: [Projects]
+      summary: 更新项目
+      operationId: updateProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [Projects]
+      summary: 删除项目
+      operationId: deleteProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdParam'
+      responses:
+        '204':
+          description: 删除成功
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ---------- 内容生成端点 ----------
+  /generation/tasks:
+    post:
+      tags: [Generation]
+      summary: 创建生成任务
+      operationId: createGenerationTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerationRequest'
+      responses:
+        '202':
+          description: 任务已接受
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationTask'
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: 任务状态查询URL
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '402':
+          $ref: '#/components/responses/PaymentRequiredError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /generation/tasks/{taskId}:
+    get:
+      tags: [Generation]
+      summary: 获取任务状态
+      operationId: getGenerationTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationTask'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /generation/tasks/{taskId}/cancel:
+    post:
+      tags: [Generation]
+      summary: 取消任务
+      operationId: cancelGenerationTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务已取消
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationTask'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: 任务无法取消
+
+  # ---------- 媒体文件端点 ----------
+  /media/upload:
+    post:
+      tags: [Media]
+      summary: 上传文件
+      operationId: uploadMedia
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 媒体文件
+                metadata:
+                  type: string
+                  description: JSON格式的元数据
+                folder:
+                  type: string
+                  description: 存储文件夹
+      responses:
+        '201':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaFile'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '413':
+          description: 文件太大
+
+  /media/files/{fileId}:
+    get:
+      tags: [Media]
+      summary: 获取文件信息
+      operationId: getMediaFile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 文件信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaFile'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [Media]
+      summary: 删除文件
+      operationId: deleteMediaFile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ---------- 计费端点 ----------
+  /billing/usage:
+    get:
+      tags: [Billing]
+      summary: 获取使用量
+      operationId: getUsage
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: 统计周期
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+            default: monthly
+        - name: start_date
+          in: query
+          description: 开始日期
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: 结束日期
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 使用量统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStats'
+
+  /billing/subscription:
+    get:
+      tags: [Billing]
+      summary: 获取订阅信息
+      operationId: getSubscription
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 订阅信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+
+# ==================== 组件定义 ====================
+components:
+  # ---------- 安全方案 ----------
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT访问令牌
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API密钥
+
+  # ---------- 参数定义 ----------
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: 页码
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: 每页数量
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    SortParam:
+      name: sort
+      in: query
+      description: 排序字段
+      schema:
+        type: string
+        example: "created_at:desc"
+    FilterParam:
+      name: filter
+      in: query
+      description: 过滤条件
+      schema:
+        type: string
+        example: "status:eq:active,created_at:gte:2024-01-01"
+    ProjectIdParam:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  # ---------- 响应定义 ----------
+  responses:
+    ValidationError:
+      description: 验证错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "VALIDATION_ERROR"
+              message: "请求参数验证失败"
+              details:
+                - field: "email"
+                  message: "邮箱格式不正确"
+                  code: "INVALID_FORMAT"
+    UnauthorizedError:
+      description: 未认证
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: 权限不足
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimitError:
+      description: 请求频率超限
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+    PaymentRequiredError:
+      description: 需要付费
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InvalidTokenError:
+      description: 令牌无效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  # ---------- 数据模型 ----------
+  schemas:
+    # 认证模型
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        remember_me:
+          type: boolean
+          default: false
+    RefreshTokenRequest:

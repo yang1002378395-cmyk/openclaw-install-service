@@ -1,0 +1,723 @@
+openapi: 3.0.3
+info:
+  title: AI Content Platform API
+  description: AI内容生产平台 RESTful API 规范
+  version: 1.0.0
+  contact:
+    name: Platform Team
+    email: api@aicontentplatform.com
+  license:
+    name: Proprietary
+    url: https://aicontentplatform.com/license
+
+servers:
+  - url: https://api.aicontentplatform.com/v1
+    description: Production server
+  - url: https://staging-api.aicontentplatform.com/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development
+
+tags:
+  - name: Authentication
+    description: 用户认证和授权
+  - name: Users
+    description: 用户管理
+  - name: Projects
+    description: 项目管理
+  - name: Generation
+    description: AI内容生成
+  - name: Media
+    description: 媒体文件管理
+  - name: Billing
+    description: 计费和成本控制
+
+paths:
+  # ==================== 认证相关 ====================
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: 用户登录
+      description: 使用邮箱/密码或第三方OAuth登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: 刷新访问令牌
+      description: 使用刷新令牌获取新的访问令牌
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: 令牌刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/InvalidToken'
+
+  # ==================== 用户相关 ====================
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: 获取当前用户信息
+      description: 获取已认证用户的详细信息
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags:
+        - Users
+      summary: 更新用户信息
+      description: 更新当前用户的个人信息
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ==================== 项目管理 ====================
+  /projects:
+    get:
+      tags:
+        - Projects
+      summary: 获取项目列表
+      description: 获取用户的项目列表，支持分页和过滤
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - name: status
+          in: query
+          description: 项目状态过滤
+          schema:
+            type: string
+            enum: [draft, active, archived]
+        - name: search
+          in: query
+          description: 项目名称搜索
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 项目列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjects'
+
+    post:
+      tags:
+        - Projects
+      summary: 创建新项目
+      description: 创建一个新的内容项目
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: 项目创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /projects/{projectId}:
+    get:
+      tags:
+        - Projects
+      summary: 获取项目详情
+      description: 获取指定项目的详细信息
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '200':
+          description: 项目详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Projects
+      summary: 更新项目
+      description: 更新项目信息
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Projects
+      summary: 删除项目
+      description: 删除指定项目（软删除）
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/projectId'
+      responses:
+        '204':
+          description: 删除成功
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== 内容生成 ====================
+  /generation/tasks:
+    post:
+      tags:
+        - Generation
+      summary: 创建生成任务
+      description: 提交AI内容生成任务
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerationRequest'
+      responses:
+        '202':
+          description: 任务已接受
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationTask'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /generation/tasks/{taskId}:
+    get:
+      tags:
+        - Generation
+      summary: 获取任务状态
+      description: 获取生成任务的当前状态和结果
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationTask'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /generation/tasks/{taskId}/cancel:
+    post:
+      tags:
+        - Generation
+      summary: 取消生成任务
+      description: 取消正在进行的生成任务
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务已取消
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationTask'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 任务无法取消（已完成或失败）
+
+  # ==================== 媒体文件 ====================
+  /media/upload:
+    post:
+      tags:
+        - Media
+      summary: 上传媒体文件
+      description: 上传图片、视频、音频等媒体文件
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 媒体文件
+                metadata:
+                  type: string
+                  description: JSON格式的元数据
+                folder:
+                  type: string
+                  description: 存储文件夹路径
+      responses:
+        '201':
+          description: 文件上传成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaFile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          description: 文件大小超过限制
+
+  /media/files/{fileId}:
+    get:
+      tags:
+        - Media
+      summary: 获取文件信息
+      description: 获取媒体文件的元数据和访问URL
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 文件信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaFile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Media
+      summary: 删除媒体文件
+      description: 删除指定的媒体文件
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== 计费相关 ====================
+  /billing/usage:
+    get:
+      tags:
+        - Billing
+      summary: 获取使用量统计
+      description: 获取当前用户的使用量统计和费用
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: 统计周期
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+            default: monthly
+        - name: start_date
+          in: query
+          description: 开始日期 (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: 结束日期 (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 使用量统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStats'
+
+  /billing/subscription:
+    get:
+      tags:
+        - Billing
+      summary: 获取订阅信息
+      description: 获取用户的订阅计划和状态
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 订阅信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+
+components:
+  # ==================== 安全方案 ====================
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT访问令牌
+
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API密钥（用于服务间通信）
+
+  # ==================== 参数定义 ====================
+  parameters:
+    page:
+      name: page
+      in: query
+      description: 页码（从1开始）
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    limit:
+      name: limit
+      in: query
+      description: 每页数量
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    sort:
+      name: sort
+      in: query
+      description: 排序字段和方向
+      schema:
+        type: string
+        example: "created_at:desc,name:asc"
+
+    projectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 项目ID
+
+  # ==================== 响应定义 ====================
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: 未认证或认证失败
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: 权限不足
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimited:
+      description: 请求频率超限
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: 请求限制数量
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: 剩余请求数量
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+              description: 限制重置时间戳
+
+    PaymentRequired:
+      description: 需要付费或额度不足
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InvalidToken:
+      description: 令牌无效或已过期
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== 数据模型 ====================
+  schemas:
+    # 认证相关
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "password123"
+        remember_me:
+          type: boolean
+          default: false
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: 刷新令牌
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT访问令牌
+        refresh_token:
+          type: string
+          description: 刷新令牌
+        token_type:
+          type: string
+          default: "Bearer"
+        expires_in:
+          type: integer
+          description: 令牌过期时间（秒）
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    # 用户相关
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        full_name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        full_name:
+          type: string
+          maxLength: 100
+        avatar_url:
+          type: string
+          format: uri
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    UserPreferences:
+      type: object
+      properties:
+        language:
+          type: string
+          default: "zh-CN"
+        timezone:
+          type: string
+          default: "Asia/Shanghai"
+        notification_email:
+          type: boolean
+          default: true
+        notification_push:
+          type: boolean
+          default: true
+        default_model:
+          type: string
+          default: "gpt-4"
+
+    # 项目相关
+    ProjectCreate:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        type:
+          type: string
+          enum: [article, image, video, audio, code]
+        settings:
+          $ref: '#/components/schemas/ProjectSettings'
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength:

@@ -1,0 +1,9 @@
+# AI 内容生产平台集成项目
+
+## 项目结构
+- AI_Model_Selection_Report.md - AI 模型选型报告
+- Integration_Architecture.md - 集成架构设计文档
+- Cost_Analysis_Report.md - 成本分析报告
+- API_Specification.md - API 接口规范
+- Security_Compliance_Guide.md - 安全合规指南
+- Implementation_Plan.md - 实施计划
