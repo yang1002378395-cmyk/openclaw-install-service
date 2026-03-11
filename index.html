@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw 安装配置服务 | AI Agent 一键部署</title>
+    <meta name="description" content="专业 OpenClaw 安装配置服务，帮您快速搭建 AI Agent 系统。支持 DeepSeek、Claude、GPT 等多种模型。">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; min-height: 100vh; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+        .hero { text-align: center; padding: 60px 0; }
+        .hero h1 { font-size: 2.5em; margin-bottom: 20px; background: linear-gradient(90deg, #00d9ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 1.2em; color: #aaa; max-width: 600px; margin: 0 auto 30px; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 40px 0; }
+        .feature { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); }
+        .feature h3 { color: #00d9ff; margin-bottom: 10px; }
+        .feature p { color: #888; font-size: 0.95em; }
+        .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin: 50px 0; }
+        .price-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 35px; text-align: center; border: 2px solid transparent; transition: all 0.3s; }
+        .price-card:hover { border-color: #00d9ff; transform: translateY(-5px); }
+        .price-card.featured { border-color: #00ff88; background: rgba(0,255,136,0.1); }
+        .price-card h3 { font-size: 1.3em; margin-bottom: 15px; }
+        .price { font-size: 2.8em; font-weight: bold; color: #00ff88; margin: 20px 0; }
+        .price span { font-size: 0.4em; color: #888; }
+        .price-card ul { list-style: none; margin: 25px 0; text-align: left; }
+        .price-card li { padding: 8px 0; color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .price-card li:before { content: "✓ "; color: #00ff88; }
+        .cta { display: inline-block; background: linear-gradient(90deg, #00d9ff, #00ff88); color: #1a1a2e; padding: 15px 40px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 1.1em; margin-top: 20px; transition: all 0.3s; }
+        .cta:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(0,217,255,0.3); }
+        .contact { text-align: center; margin: 60px 0; padding: 40px; background: rgba(255,255,255,0.05); border-radius: 16px; }
+        .contact h2 { margin-bottom: 20px; }
+        .contact-methods { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-top: 20px; }
+        .contact-item { display: flex; align-items: center; gap: 10px; color: #aaa; }
+        .contact-item strong { color: #00d9ff; }
+        .footer { text-align: center; padding: 30px; color: #666; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px; }
+        .badge { display: inline-block; background: #00ff88; color: #1a1a2e; padding: 5px 15px; border-radius: 20px; font-size: 0.8em; font-weight: bold; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <div class="badge">专业服务</div>
+            <h1>OpenClaw 安装配置服务</h1>
+            <p>让 AI Agent 为您 24 小时工作。专业安装、配置、培训，一站式服务。</p>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🚀 快速部署</h3>
+                <p>1 小时内完成安装配置，立即可用。支持 macOS / Windows / Linux。</p>
+            </div>
+            <div class="feature">
+                <h3>🤖 多模型支持</h3>
+                <p>DeepSeek、Claude、GPT、GLM 等，按需切换，成本最优。</p>
+            </div>
+            <div class="feature">
+                <h3>📱 全渠道接入</h3>
+                <p>Telegram、Discord、微信、飞书... 一个 Agent，多平台响应。</p>
+            </div>
+            <div class="feature">
+                <h3>💰 成本透明</h3>
+                <p>DeepSeek 成本仅为 GPT 的 1/150，省下的都是利润。</p>
+            </div>
+        </div>
+
+        <h2 style="text-align: center; margin: 40px 0 20px;">选择套餐</h2>
+        <div class="pricing">
+            <div class="price-card">
+                <h3>基础版</h3>
+                <div class="price">¥99<span>/次</span></div>
+                <ul>
+                    <li>OpenClaw 本地安装</li>
+                    <li>基础配置 + 1 个模型</li>
+                    <li>使用文档 + 视频教程</li>
+                    <li>7 天技术支持</li>
+                </ul>
+                <a href="#contact" class="cta">立即咨询</a>
+            </div>
+            <div class="price-card featured">
+                <h3>高级版 ⭐</h3>
+                <div class="price">¥299<span>/次</span></div>
+                <ul>
+                    <li>完整安装 + 多模型配置</li>
+                    <li>Telegram/Discord 接入</li>
+                    <li>3 个实用 Skills 安装</li>
+                    <li>30 天技术支持</li>
+                    <li>远程桌面协助</li>
+                </ul>
+                <a href="#contact" class="cta">立即咨询</a>
+            </div>
+            <div class="price-card">
+                <h3>企业版</h3>
+                <div class="price">¥999<span>/次</span></div>
+                <ul>
+                    <li>多用户/团队部署</li>
+                    <li>私有模型 + 数据隔离</li>
+                    <li>定制 Skills 开发</li>
+                    <li>90 天技术支持</li>
+                    <li>专属技术顾问</li>
+                </ul>
+                <a href="#contact" class="cta">立即咨询</a>
+            </div>
+        </div>
+
+        <div class="contact" id="contact">
+            <h2>立即开始</h2>
+            <p style="color: #888; margin-bottom: 20px;">添加微信或发送邮件，24 小时内响应</p>
+            <div class="contact-methods">
+                <div class="contact-item">
+                    <strong>微信：</strong> yanghu-dev
+                </div>
+                <div class="contact-item">
+                    <strong>Telegram：</strong> @yanghu_dev
+                </div>
+                <div class="contact-item">
+                    <strong>邮箱：</strong> yanghu.dev@gmail.com
+                </div>
+            </div>
+            <p style="margin-top: 30px; color: #666; font-size: 0.9em;">付款方式：微信支付 / 支付宝 / USDT</p>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 OpenClaw 安装服务 | 专业 · 快速 · 可靠</p>
+        </div>
+    </div>
+</body>
+</html>
